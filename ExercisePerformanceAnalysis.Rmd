@@ -1,6 +1,8 @@
 ---
 title: "Quanitifying Exercise Performance using Personal Fitness Tracker Data"
-output: html_document
+output: 
+  html_document: 
+    self_contained: no
 ---
 
 ###Author : Stephanie Roark
