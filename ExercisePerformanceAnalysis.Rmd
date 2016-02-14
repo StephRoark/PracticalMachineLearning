@@ -1,0 +1,211 @@
+---
+title: "Quanitifying Exercise Performance using Personal Fitness Tracker Data"
+output: html_document
+---
+
+###Author : Stephanie Roark
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. Using data from accelerometers on the belt, forearm, arm, and dumbell, 6 participants were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+In order to predict whether the participant's did the exercise correctly or incorrectly, we must begin by selecting the data relevant to the exercises that we want to predict.
+
+```{r include=FALSE}
+library(knitr)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(caret)
+library(rattle)
+library(rpart)
+library(randomForest)
+library(gbm)
+library(rpart.plot)
+library(doMC)
+registerDoMC(cores = 4)
+
+opts_chunk$set(echo=FALSE, cache=TRUE)
+set.seed(42)
+
+train.url <-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+test.url <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+data.train <- read.csv(train.url, na.strings=c("NA","#DIV/0!",""))
+data.test <- read.csv(test.url, na.strings=c("NA","#DIV/0!",""))
+
+```
+
+The data captured on the belt, arm, forearm and dumbell are selected as predictors. Additionally, all variables with missing data are excluded.
+
+###Exploratory Data Analysis
+
+```{r echo=TRUE}
+classe <- data.train$classe
+
+data.subset <- grepl("belt|arm|forearm|dumbbell", names(data.train))
+data.missing <- sapply(data.train[data.subset], function (x) any(is.na(x) | x == ""))
+pred.data <- !data.missing
+predictors <- names(data.missing)[pred.data]
+
+#create the final data set with the predictor variables and outcome variable
+training <- data.frame(classe, data.train[,predictors])
+testing <- data.test[,predictors]
+
+# #Create my own test and train sets    
+inTrain <- createDataPartition(y=training$classe, p=0.6, list=FALSE)
+train <- training[inTrain, ]
+test <- training[-inTrain, ]
+dim(train)
+dim(test)
+```
+
+###Cross Validation, Preproccessing and Variance
+
+```{r}
+#examine variance of variables...if constant would remove, but there are no constant vars
+nzv.train <- nearZeroVar(training, saveMetrics = TRUE)
+
+#Preprocessing data (params kept for possible use against test set)
+preprocessParams <- preProcess(train, method = c("scale", "center", "nzv"))
+
+#Cross Validation
+train.control <- trainControl(method="repeatedcv", number = 10, repeats= 5)
+
+```
+
+###Modeling 
+Multiple methods are used for creating models for prediction.
+
+####GBM Model
+Beginning with Gradient boosting, a method used for regression and classification problems, which produces a prediction model in the form of an ensemble of weak prediction models, typically decision trees. It builds the model in a stage-wise fashion like other boosting methods do, and it generalizes them by allowing optimization of an arbitrary differentiable loss function.
+
+```{r}
+model.gbm <- train(classe ~ ., method = "gbm", data = train, verbose = FALSE, trControl=train.control, preProcess=c("center", "scale", "nzv"))
+pred.gbm <- predict(model.gbm, test)
+confusionMatrix(pred.gbm, test$classe)
+```
+
+The accuracy of the GBM model is 96.3%.
+
+####Rpart:
+Next we will examine an Rpart model or Recursive Partitioning and Regression Trees:
+
+```{r}
+model.rpart <- train(classe ~ ., data = train, method = "rpart", trControl=train.control, preProcess=c("center", "scale", "nzv"))
+pred.rpart <- predict(model.rpart, test)
+confusionMatrix(pred.rpart, test$classe)
+```
+
+The rpart model has a significantly lower accuracy of 49.4%
+
+```{r}
+model2.rpart <- rpart(classe ~ ., data = train, method = "class")
+fancyRpartPlot(model2.rpart)
+```
+
+####Random Forest
+And finally, the Random Forest model which are an ensemble learning method for classification and regression that operate by constructing a multitude of decision trees.
+
+```{r}
+#rf model with preprocessing and cross validation
+model.rf <- train(classe ~ ., method = "rf", data = train, trControl=train.control, preProcess=c("center", "scale", "nzv"), allowParallel=TRUE)
+pred.rf <- predict(model.rf, test)
+confusionMatrix(pred.rf, test$classe)
+```
+
+The accuracy of the random forest model is the best at 99.3%, the best of the three models. This value for the accuracy is very good and we should look at the possibility of overfitting.
+We can plot the error vs. the number of trees in the random forest model to check for overfitting of the model.
+
+```{r}
+#plot of cv error vs trees to see overfitting
+plot(model.rf$finalModel)
+
+model.rf$finalModel
+```
+
+The OOB estimate of the error rate is 0.96%.
+
+The correlation of variables can interfer with the prediction of the models. 
+
+```{r}
+features.cor <- findCorrelation(abs(cor(train[, -1])))
+correlated.features <- names(train)[features.cor]
+correlated.features
+
+#subset the train data to remove the correlated variables
+train.uncor <- subset(train, select = -c(accel_belt_y,accel_belt_x , gyros_belt_z, total_accel_dumbbell, gyros_dumbbell_y, total_accel_arm))
+
+model.rf.uncor <- train(classe ~ ., method = "rf", data = train.uncor, trControl=train.control, preProcess=c("center", "scale", "nzv"), allowParallel=TRUE )
+pred.rf.uncor <- predict(model.rf.uncor, test)
+confusionMatrix(pred.rf.uncor, test$classe)
+confusionMatrix(pred.rf.uncor, test$classe)$overall[1]
+```
+
+The accuracy for the random forest model without the correlated variables is 99.2%.
+
+```{r}
+#plot of cv error vs trees to see overfitting
+plot(model.rf.uncor$finalModel)
+
+model.rf.uncor$finalModel
+```
+
+The OOB estimate of the error rate is 0.83%.
+
+Using the varImp function we can examine variable importance to futher select the best predictor variables for the model.
+
+```{r}
+#Variable Importance(should I remove less important variables??????)
+rf.imp <- varImp(model.rf)
+rf.imp
+```
+
+The top ten variables from the measure of importance are:
+
+```{r}
+plot(varImp(model.rf), top = 10)
+
+```
+
+Then we can build a model based on the most important variables. 
+A model with the top 6 variables:
+
+```{r}
+imp.df<-data.frame(variable=rownames(rf.imp$importance),value=rf.imp$importance$Overall)
+top <- as.character(imp.df[order(imp.df$value,decreasing=TRUE),"variable"])
+sub.train <- train.uncor %>% select(one_of(c("classe", top[1:6]) ) )
+
+model.rf.sub.var <- train(classe ~ ., method = "rf", data = sub.train, trControl=train.control, preProcess=c("center", "scale", "nzv"), allowParallel=TRUE )
+model.rf.sub.var$finalModel
+```
+
+Looking at the confusion matrix we see
+
+```{r}
+pred.rf.sub.var <- predict(model.rf.sub.var, test)
+conMat <- confusionMatrix(pred.rf.sub.var, test$classe)
+conMat$table
+confusionMatrix(pred.rf.sub.var, test$classe)$overall[1]
+```
+
+The accuracy for the random forest model including the top 6 variables of importance falls to 97.3%.
+
+Plot of the final model:
+
+```{r}
+#question....what is the green line that keeps an error rate higher than the others
+plot(model.rf.sub.var$finalModel)
+```
+
+The OOB estimate of the error rate is 2.52%.
+
+###Predictions
+The predictions on the test set using the both the uncorrelated model and the most important variables models.
+
+```{r}
+#Final Project quiz predictions against the test set 
+predict(model.rf.uncor, data.test)
+predict(model.rf.sub.var, data.test)
+
+```
+
+Both models accurately predict the test cases.

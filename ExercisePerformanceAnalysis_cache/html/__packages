@@ -1,0 +1,16 @@
+base
+knitr
+plyr
+dplyr
+ggplot2
+lattice
+caret
+rattle
+rpart
+randomForest
+survival
+gbm
+rpart.plot
+foreach
+iterators
+doMC
