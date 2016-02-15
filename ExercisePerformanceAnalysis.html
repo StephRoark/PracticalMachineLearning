@@ -172,7 +172,7 @@ dim(train)</code></pre>
 ## Balanced Accuracy      0.7689  0.62910  0.64408   0.5000  0.72630</code></pre>
 <p>The rpart model has a significantly lower accuracy of 49.4%</p>
 <pre><code>## Warning: labs do not fit even at cex 0.15, there may be some overplotting</code></pre>
-<p><img src="ExercisePerformanceAnalysis_files/figure-html/unnamed-chunk-6-1.png" title="" alt="" width="672" /></p>
+<p><img src="ExercisePerformanceAnalysis_files/figure-html/unnamed-chunk-6-1.png" /></p>
 </div>
 <div id="random-forest" class="section level4">
 <h4>Random Forest</h4>
@@ -209,7 +209,7 @@ dim(train)</code></pre>
 ## Detection Prevalence   0.2851   0.1940   0.1760   0.1620   0.1829
 ## Balanced Accuracy      0.9992   0.9960   0.9928   0.9895   0.9971</code></pre>
 <p>The accuracy of the random forest model is the best at 99.3%, the best of the three models. This value for the accuracy is very good and we should look at the possibility of overfitting. We can plot the error vs. the number of trees in the random forest model to check for overfitting of the model.</p>
-<p><img src="ExercisePerformanceAnalysis_files/figure-html/unnamed-chunk-8-1.png" title="" alt="" width="672" /></p>
+<p><img src="ExercisePerformanceAnalysis_files/figure-html/unnamed-chunk-8-1.png" /></p>
 <pre><code>## 
 ## Call:
 ##  randomForest(x = x, y = y, mtry = param$mtry, allowParallel = TRUE) 
@@ -264,7 +264,7 @@ dim(train)</code></pre>
 <pre><code>##  Accuracy 
 ## 0.9910783</code></pre>
 <p>The accuracy for the random forest model without the correlated variables is 99.2%.</p>
-<p><img src="ExercisePerformanceAnalysis_files/figure-html/unnamed-chunk-10-1.png" title="" alt="" width="672" /></p>
+<p><img src="ExercisePerformanceAnalysis_files/figure-html/unnamed-chunk-10-1.png" /></p>
 <pre><code>## 
 ## Call:
 ##  randomForest(x = x, y = y, mtry = param$mtry, allowParallel = TRUE) 
@@ -308,7 +308,7 @@ dim(train)</code></pre>
 ## accel_dumbbell_x    28.95
 ## yaw_dumbbell        28.30</code></pre>
 <p>The top ten variables from the measure of importance are:</p>
-<p><img src="ExercisePerformanceAnalysis_files/figure-html/unnamed-chunk-12-1.png" title="" alt="" width="672" /></p>
+<p><img src="ExercisePerformanceAnalysis_files/figure-html/unnamed-chunk-12-1.png" /></p>
 <p>Then we can build a model based on the most important variables. A model with the top 6 variables:</p>
 <pre><code>## 
 ## Call:
@@ -337,7 +337,7 @@ dim(train)</code></pre>
 ## 0.9802447</code></pre>
 <p>The accuracy for the random forest model including the top 6 variables of importance falls to 97.3%.</p>
 <p>Plot of the final model:</p>
-<p><img src="ExercisePerformanceAnalysis_files/figure-html/unnamed-chunk-15-1.png" title="" alt="" width="672" /></p>
+<p><img src="ExercisePerformanceAnalysis_files/figure-html/unnamed-chunk-15-1.png" /></p>
 <p>The OOB estimate of the error rate is 2.52%.</p>
 </div>
 </div>

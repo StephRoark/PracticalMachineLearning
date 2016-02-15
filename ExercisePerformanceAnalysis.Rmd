@@ -2,6 +2,7 @@
 title: "Quanitifying Exercise Performance using Personal Fitness Tracker Data"
 output: 
   html_document: 
+    keep_md: yes
     self_contained: no
 ---
 
